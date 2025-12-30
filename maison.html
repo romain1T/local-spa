@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🏠 Ma Maison - Tableau de Bord</title>
+
+    <link rel="icon" type="image/png" sizes="32x32" href="https://raw.githubusercontent.com/romain1T/local-spa/main/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="https://raw.githubusercontent.com/romain1T/local-spa/main/favicon-16x16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="https://raw.githubusercontent.com/romain1T/local-spa/main/apple-touch-icon.png">
+    <link rel="manifest" href="https://raw.githubusercontent.com/romain1T/local-spa/main/site.webmanifest">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
+        .card-hover { transition: transform 0.2s; }
+        .card-hover:hover { transform: translateY(-2px); }
+        .grid-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+        /* Style pour les cartes faites */
+        .card-done {
+            border: 2px solid #34D399; /* Vert-400 */
+            background-color: #F0FDF4; /* Vert-50 */
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.03);
+            opacity: 0.9;
+        }
+
+        /* --- Mobile-Specific Styles (for iPhone 13 and smaller) --- */
+        @media (max-width: 767px) {
+            /* Marge en bas du corps pour éviter que le contenu soit caché par la barre de navigation fixe */
+            body { 
+                padding-bottom: 4rem; 
+            }
+            /* Masquer la navigation latérale MD+ */
+            #desktop-nav {
+                display: none;
+            }
+            /* Afficher la navigation inférieure */
+            #mobile-nav {
+                display: flex !important;
+            }
+            /* Retirer les marges de la main pour maximiser l'espace */
+            main {
+                padding: 1rem !important;
+            }
+            .grid-cards {
+                /* Sur mobile, on préfère une grille plus serrée pour éviter le scrolling horizontal excessif */
+                grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div id="app" class="min-h-screen flex flex-col md:flex-row">
+
+    <nav id="desktop-nav" class="bg-slate-800 text-white w-full md:w-64 flex-shrink-0 p-6 flex flex-col justify-between">
+        <div>
+            <h1 class="text-2xl font-bold mb-8 flex items-center gap-2">
+                <span>🏠</span> Dashboard
+            </h1>
+            <ul class="space-y-4" id="nav-tabs-desktop">
+                <li>
+                    <button data-tab="dashboard" class="w-full text-left px-4 py-2 rounded transition hover:bg-slate-700 flex items-center gap-3 bg-slate-700">
+                        <span>⚡</span> Actions & Urgences
+                    </button>
+                </li>
+                <li>
+                    <button data-tab="bible" class="w-full text-left px-4 py-2 rounded transition hover:bg-slate-700 flex items-center gap-3">
+                        <span>📘</span> La Bible (Infos)
+                    </button>
+                </li>
+                <li>
+                    <button data-tab="calendar" class="w-full text-left px-4 py-2 rounded transition hover:bg-slate-700 flex items-center gap-3">
+                        <span>📅</span> Calendrier
+                    </button>
+                </li>
+            </ul>
+        </div>
+        <div class="text-xs text-slate-400 mt-8">
+            <p>Données stockées localement.</p>
+            <button onclick="resetData()" class="text-red-400 hover:text-red-300 mt-2 underline">Réinitialiser tout</button>
+        </div>
+    </nav>
+
+    <main class="flex-1 p-4 md:p-8 overflow-y-auto">
+        
+        <div id="dashboard" class="content-tab">
+            <header class="mb-8">
+                <h2 class="text-3xl font-bold text-gray-800">Bonjour ! 👋</h2>
+                <p class="text-gray-600">Voici l'état de santé de ta maison aujourd'hui. Tâches triées par catégorie.</p>
+            </header>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-blue-500">
+                    <p class="text-sm text-gray-500 uppercase">Prochaine Urgence</p>
+                    <p class="text-xl font-bold text-gray-800" id="stat-urgent">...</p>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-green-500">
+                    <p class="text-sm text-gray-500 uppercase">Tâches OK (saison)</p>
+                    <p class="text-xl font-bold text-gray-800" id="stat-completion">...</p>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-purple-500">
+                    <p class="text-sm text-gray-500 uppercase">Saison actuelle</p>
+                    <p class="text-xl font-bold text-gray-800" id="stat-season">...</p>
+                </div>
+            </div>
+
+            <div id="tasks-by-category">
+                </div>
+        </div>
+
+        <div id="bible" class="content-tab hidden">
+            <h2 class="text-3xl font-bold text-gray-800 mb-6">📘 La Bible d'Entretien</h2>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+                <div class="space-y-6">
+                    <div class="bg-white p-6 rounded-xl shadow-sm">
+                        <h3 class="text-xl font-bold text-yellow-600 mb-4 flex items-center gap-2">⚡ Électricité</h3>
+                        <div class="bg-yellow-50 p-3 rounded mb-4 text-sm font-mono">
+                            <p><strong>PDL :</strong> 25 248 480 418 619</p>
+                        </div>
+                        <ul class="list-disc pl-5 text-gray-700 space-y-1 text-sm">
+                            <li><strong>1x/an :</strong> Vérif visuelle tableau (bruit, chaleur).</li>
+                            <li><strong>6 mois :</strong> Test différentiel (Bouton TEST).</li>
+                        </ul>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-xl shadow-sm">
+                        <h3 class="text-xl font-bold text-blue-600 mb-4 flex items-center gap-2">💧 Eau</h3>
+                        <div class="bg-blue-50 p-3 rounded mb-4 text-sm font-mono">
+                            <p><strong>Compteur :</strong> D10LA057249</p>
+                        </div>
+                        <ul class="list-disc pl-5 text-gray-700 space-y-1 text-sm">
+                            <li>Relever compteur 1x/mois (fuite ?).</li>
+                            <li>Absence longue : Couper arrivée + purger ext.</li>
+                        </ul>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-xl shadow-sm">
+                        <h3 class="text-xl font-bold text-gray-600 mb-4 flex items-center gap-2">🏠 Climatisation & Hotte</h3>
+                        <div class="space-y-3">
+                            <div>
+                                <h4 class="font-bold text-sm">❄️ Clim (Gaines)</h4>
+                                <p class="text-xs text-gray-600">Nettoyage filtres : tous les 2-3 mois (Aspiro + Eau tiède).</p>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-sm">🌬️ Clim Chambre (Bouche unique)</h4>
+                                <p class="text-xs text-gray-600">Nettoyage filtre : 2 mois en utilisation. Remplacement : 1x/an min.</p>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-sm">🍳 Hotte (AirForce)</h4>
+                                <p class="text-xs text-gray-600">Filtres métal : 1-2 mois (Lave-vaisselle). Filtre Charbon : 6-12 mois.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="space-y-6">
+                    <div class="bg-white p-6 rounded-xl shadow-sm">
+                        <h3 class="text-xl font-bold text-indigo-600 mb-4 flex items-center gap-2">9. ÉLECTROMÉNAGER CUISINE (Whirlpool)</h3>
+                        <h4 class="font-semibold text-sm mb-1">🍽️ LAVE-VAISSELLE</h4>
+                        <ul class="list-disc pl-5 text-gray-700 text-xs space-y-1 mb-3">
+                            <li>Hebdo : Nettoyer le filtre (fond de cuve).</li>
+                            <li>Mensuel : Cycle à vide haute temp. (Vinaigre ou produit).</li>
+                            <li>Trimestriel : Vérif bras aspersion et joints.</li>
+                        </ul>
+                        
+                        <h4 class="font-semibold text-sm mb-1">🔥 FOUR</h4>
+                        <ul class="list-disc pl-5 text-gray-700 text-xs space-y-1 mb-3">
+                            <li>Après usage : Essuyer les projections four tiède.</li>
+                            <li>Mensuel/Bimensuel : Nettoyage produit spécial four ou pâte bicarbonate.</li>
+                        </ul>
+
+                        <h4 class="font-semibold text-sm mb-1">🍲 MICRO-ONDES</h4>
+                        <ul class="list-disc pl-5 text-gray-700 text-xs space-y-1">
+                            <li>Hebdo : Nettoyage intérieur (Eau chaude + citron).</li>
+                            <li>Mensuel : Nettoyage plateau tournant et extérieur.</li>
+                        </ul>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-xl shadow-sm">
+                        <h3 class="text-xl font-bold text-red-600 mb-4 flex items-center gap-2">10. ÉLECTROMÉNAGER BUANDERIE & FROID (Valberg)</h3>
+                        <h4 class="font-semibold text-sm mb-1">👕 MACHINE À LAVER</h4>
+                        <ul class="list-disc pl-5 text-gray-700 text-xs space-y-1 mb-3">
+                            <li>Après lavage : Laisser hublot entrouvert, essuyer joint.</li>
+                            <li>Mensuel : Cycle à vide 60/90°C (Vinaigre ou produit).</li>
+                            <li>Trimestriel : Nettoyage Bac à lessive + Filtre de vidange.</li>
+                        </ul>
+                        
+                        <h4 class="font-semibold text-sm mb-1">❄️ RÉFRIGÉRATEUR</h4>
+                        <ul class="list-disc pl-5 text-gray-700 text-xs space-y-1 mb-3">
+                            <li>Trimestriel : Nettoyage complet (Eau tiède + vinaigre).</li>
+                            <li>Annuel : Aspirer la grille arrière (conso élec).</li>
+                            <li>Dégivrage : Dès que givre > 3 mm.</li>
+                        </ul>
+                        
+                        <h4 class="font-semibold text-sm mb-1">🧹 ASPIRATEUR</h4>
+                        <ul class="list-disc pl-5 text-gray-700 text-xs space-y-1">
+                            <li>Sac : Remplacer à 2/3 rempli ou si aspiration diminue.</li>
+                            <li>Filtres : Nettoyage 2-3 mois. Remplacement 1x/an. (Sécher complètement).</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="space-y-6">
+                    <div class="bg-white p-6 rounded-xl shadow-sm">
+                        <h3 class="text-xl font-bold text-cyan-600 mb-4 flex items-center gap-2">🏊 Piscine - Le Guide</h3>
+                        <h4 class="font-bold mb-2 text-sm">Filtration (Temps = Température eau ÷ 2)</h4>
+                        <ul class="list-disc pl-5 text-gray-700 text-xs space-y-1 mb-3">
+                            <li>24°C → 12h | Hiver : 2 à 4h.</li>
+                        </ul>
+                        <h4 class="font-bold mb-2 text-sm">Chimie (pH 7.0 - 7.4)</h4>
+                        <ul class="list-disc pl-5 text-gray-700 text-xs space-y-1">
+                            <li>Corriger pH avant le chlore.</li>
+                            <li>Chlore choc : si eau trouble, orage. Filtration 24h après choc.</li>
+                            <li>**Hiver :** Test pH une fois par mois. Maintenir chlore lent.</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="bg-white p-6 rounded-xl shadow-sm">
+                        <h3 class="text-xl font-bold text-green-600 mb-4 flex items-center gap-2">🌳 Jardin & Arbres</h3>
+                        <div class="space-y-3">
+                            <div>
+                                <h4 class="font-bold text-sm">🍊 Oranger & Agrumes</h4>
+                                <p class="text-xs text-gray-600">Engrais agrumes Mars-Sept. Eau : 2-3x/semaine en été.</p>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-sm">🌿 Olivier</h4>
+                                <p class="text-xs text-gray-600">Déteste l'excès d'eau ! Engrais Avril-Sept. Taille fin d'hiver.</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white p-6 rounded-xl shadow-sm">
+                        <h3 class="text-xl font-bold text-orange-600 mb-4 flex items-center gap-2">13. VÉHICULE – Skoda Citigo 🚗</h3>
+                        <h4 class="font-semibold text-sm mb-1">Entretien (Annuel / 10-15k km)</h4>
+                        <ul class="list-disc pl-5 text-gray-700 text-xs space-y-1 mb-3">
+                            <li>Vidange moteur + Filtre à huile.</li>
+                            <li>Tous les 2 ans : Liquide de frein.</li>
+                            <li>Tous les 30k km : Filtre à air + Filtre habitacle.</li>
+                            <li>Pneus : Vérif pression 1x/mois.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="calendar" class="content-tab hidden">
+            <h2 class="text-3xl font-bold text-gray-800 mb-6">📅 Calendrier Annuel</h2>
+            <div class="space-y-4" id="calendar-view">
+                </div>
+        </div>
+
+    </main>
+</div>
+
+<nav id="mobile-nav" class="fixed bottom-0 left-0 right-0 bg-slate-800 shadow-lg border-t border-slate-700 text-white p-2 hidden justify-around z-10">
+    <button data-tab="dashboard" class="w-1/3 py-1 rounded transition hover:bg-slate-700 flex flex-col items-center text-sm active-tab-mobile">
+        <span class="text-xl">⚡</span>
+        <span class="text-xs mt-0.5">Actions</span>
+    </button>
+    <button data-tab="bible" class="w-1/3 py-1 rounded transition hover:bg-slate-700 flex flex-col items-center text-sm">
+        <span class="text-xl">📘</span>
+        <span class="text-xs mt-0.5">Bible</span>
+    </button>
+    <button data-tab="calendar" class="w-1/3 py-1 rounded transition hover:bg-slate-700 flex flex-col items-center text-sm">
+        <span class="text-xl">📅</span>
+        <span class="text-xs mt-0.5">Calendrier</span>
+    </button>
+</nav>
+
+
+<script>
+// =========================================================================
+// 1. DATA (Configuration)
+// =========================================================================
+
+const STORAGE_KEY = 'maisonTasks_v4'; 
+
+// season: 'summer' (Mai-Octobre), 'winter' (Nov-Avril), 'all' (Toute l'année).
+// freqDays: Fréquence normale (Été ou Toute l'année)
+// freqDaysWinter: Fréquence spécifique en hiver. Si 0, la tâche est masquée en hiver (sauf si en retard).
+const defaultTasks = [
+    // --- Piscine 🏊 (pool) ---
+    { id: 3, title: 'Nettoyage Skimmers/Panier pompe', category: 'pool', freqDays: 7, freqDaysWinter: 30, desc: 'Retirer feuilles et insectes.', icon: '🧺', season: 'all' },
+    { id: 4, title: 'pH/Chlore Piscine', category: 'pool', freqDays: 4, freqDaysWinter: 30, desc: 'Test bandelette. Idéal : 7.0 - 7.4. Hiver : 1x/mois.', icon: '🧪', season: 'all' },
+    { id: 5, title: 'Balai / Robot Piscine', category: 'pool', freqDays: 7, freqDaysWinter: 0, desc: 'Fond et parois.', icon: '🧹', season: 'summer' },
+    { id: 6, title: 'Contre-lavage Filtre', category: 'pool', freqDays: 14, freqDaysWinter: 0, desc: 'Jusqu\'à eau claire (2-3 min).', icon: '🔄', season: 'summer' },
+    
+    // --- Jardin 🌳 (garden) ---
+    { id: 9, title: 'Engrais Agrumes', category: 'garden', freqDays: 15, freqDaysWinter: 0, desc: 'De Mars à Septembre.', icon: '💊', season: 'summer' },
+    { id: 11, title: 'Aération Pelouse', category: 'garden', freqDays: 365, freqDaysWinter: 0, desc: 'Mix terre/sable (50/50). (Printemps idéal).', icon: '🌱', season: 'all' },
+    
+    // --- Maison & Fluides 🏠 (home, water, elec) ---
+    { id: 1, title: 'Relevé Compteur Eau', category: 'water', freqDays: 30, freqDaysWinter: 30, desc: 'Noter le chiffre, vérifier conso anormale.', icon: '💧', season: 'all' },
+    { id: 2, title: 'Test Différentiel Élec', category: 'elec', freqDays: 180, freqDaysWinter: 180, desc: 'Appuyer sur le bouton TEST du tableau.', icon: '⚡', season: 'all' },
+    { id: 10, title: 'Vérif Tableau Élec', category: 'elec', freqDays: 365, freqDaysWinter: 365, desc: 'Visuel + Toucher (pas de chaleur ou bruit).', icon: '👀', season: 'all' },
+    { id: 7, title: 'Filtres Clim Gaines', category: 'home', freqDays: 75, freqDaysWinter: 75, desc: 'Aspirateur + eau tiède.', icon: '❄️', season: 'all' },
+    { id: 12, title: 'Filtre Clim Chambre', category: 'home', freqDays: 60, freqDaysWinter: 60, desc: 'Nettoyer ou remplacer le filtre.', icon: '🌬️', season: 'all' },
+    
+    // --- Électroménager 🍽️ (kitchen, laundry) ---
+    { id: 8, title: 'Filtres Hotte', category: 'home', freqDays: 45, freqDaysWinter: 45, desc: 'Au lave-vaisselle ou dégraissant.', icon: '🍳', season: 'all' }, // Rattaché à Home (Clim/Hotte)
+    { id: 14, title: 'Filtre Lave-Vaisselle', category: 'kitchen', freqDays: 7, freqDaysWinter: 7, desc: 'Retirer et rincer le filtre du fond de cuve.', icon: '🍽️', season: 'all' },
+    { id: 15, title: 'Cycle Lave-Vaisselle à vide', category: 'kitchen', freqDays: 30, freqDaysWinter: 30, desc: 'Haute temp. + vinaigre/produit.', icon: '🧼', season: 'all' },
+    { id: 16, title: 'Cycle Machine à Laver à vide', category: 'laundry', freqDays: 30, freqDaysWinter: 30, desc: '60/90°C + vinaigre/produit.', icon: '👕', season: 'all' },
+    { id: 17, title: 'Filtre Vidange Lave-Linge', category: 'laundry', freqDays: 90, freqDaysWinter: 90, desc: 'Nettoyage du filtre en bas de la machine.', icon: '⚙️', season: 'all' },
+    { id: 18, title: 'Nettoyage Réfrigérateur', category: 'kitchen', freqDays: 90, freqDaysWinter: 90, desc: 'Vider et nettoyer intérieur (vinaigre).', icon: '🧊', season: 'all' },
+    { id: 19, title: 'Aspirer Grille Frigo Arrière', category: 'kitchen', freqDays: 365, freqDaysWinter: 365, desc: 'Améliore la conso élec.', icon: '🔌', season: 'all' },
+    { id: 20, title: 'Filtres Aspirateur', category: 'home', freqDays: 75, freqDaysWinter: 75, desc: 'Nettoyer ou remplacer les filtres (laisser sécher!).', icon: '🧹', season: 'all' }, // Rattaché à Home
+    
+    // --- Véhicule 🚗 (auto) ---
+    { id: 21, title: 'Pression Pneus Voiture', category: 'auto', freqDays: 30, freqDaysWinter: 30, desc: 'Vérifier la pression (Citigo).', icon: '🚗', season: 'all' },
+    { id: 22, title: 'Niveaux Voiture', category: 'auto', freqDays: 90, freqDaysWinter: 90, desc: 'Lave-glace, huile, etc.', icon: '⛽', season: 'all' },
+];
+
+const calendarData = [
+    { name: 'Janvier', maison: 'Vérifier fuites (toit/eau)\nAération 10min/jour\nPiscine: Filtration min (2-4h)', jardin: 'Pas de travaux lourds.\nProtéger Oranger/Olivier du gel.\nArrosage très limité.' },
+    { name: 'Février', maison: 'Test Différentiel\nVérifier joints SDB/Cuisine\nPiscine: Nettoyage skimmers', jardin: 'Préparer matériel.\nTaille Olivier (structure).\nTaille légère Oranger (bois mort).' },
+    { name: 'Mars', maison: 'Nettoyage filtres Clim\nVérif graisse Hotte\nPiscine: Nettoyage complet', jardin: 'Aération sol + apport terre.\n1ère tonte haute.\nDébut engrais agrumes/olivier.' },
+    { name: 'Avril', maison: 'Vérif robinets ext.\nNettoyage gouttières\nPiscine: Remise en service', jardin: 'Tonte régulière.\nOranger: Engrais /15j.\nSurveiller parasites.' },
+    { name: 'Mai', maison: 'Contrôle général\nNettoyage filtres Clim\nPiscine: Tests pH 2x/sem', jardin: 'Tonte hebdo.\nFloraison Oranger (arroser régulier).\nOlivier: croissance active.' },
+    { name: 'Juin', maison: 'Vérifier Clim\nNettoyage Hotte\nPiscine: Plein régime, chlore fréquent', jardin: 'Arrosage matin/soir.\nEngrais régulier.\nOlivier: Plein soleil.' },
+    { name: 'Juillet', maison: 'Surveiller conso eau\nAération nuit\nPiscine: Entretien renforcé', jardin: 'Arrosage raisonné.\nLimiter piétinement pelouse.' },
+    { name: 'Août', maison: 'Vérif fuites avant départ\nPiscine: Filtration max', jardin: 'Arrosage canicule.\nPas de taille Oranger.' },
+    { name: 'Septembre', maison: 'Nettoyage filtres Clim\nPiscine: Réduction filtration', jardin: 'Regarnissage pelouse.\nDerniers engrais Oranger/Olivier.' },
+    { name: 'Octobre', maison: 'Heure d\'hiver\nPiscine: Hivernage (ajust pH)', jardin: 'Dernière tonte haute.\nRamassage feuilles.' },
+    { name: 'Novembre', maison: 'Vérif chauffage\nPiscine: Filtration min', jardin: 'Repos végétatif.\nÉviter piétinement.' },
+    { name: 'Décembre', maison: 'Surveillance Gel\nPiscine: Contrôle visuel', jardin: 'Repos complet.\nProtection grand froid.' },
+];
+
+let tasks = [];
+
+// =========================================================================
+// 2. LOGIQUE DE CALCUL ET DE FORMATAGE
+// =========================================================================
+
+const categoryGroups = {
+    'pool': { title: 'Piscine 🏊', order: 1 },
+    'garden': { title: 'Jardin 🌳', order: 2 },
+    'auto': { title: 'Véhicule 🚗', order: 3 },
+    'kitchen': { title: 'Électroménager Cuisine 🍽️', order: 4 },
+    'laundry': { title: 'Buanderie 👕', order: 5 },
+    'home': { title: 'Maison & Clim 🏠', order: 6 },
+    'water': { title: 'Eau 💧', order: 7 },
+    'elec': { title: 'Électricité ⚡', order: 8 },
+};
+
+function getSeason() {
+    const month = new Date().getMonth() + 1; // 1 (Jan) à 12 (Dec)
+    // Été : Mai (5) à Octobre (10)
+    if (month >= 5 && month <= 10) {
+        return { name: 'Été ☀️ (Mai-Octobre)', key: 'summer' };
+    }
+    // Hiver : Novembre (11) à Avril (4)
+    return { name: 'Hiver ❄️ (Novembre-Avril)', key: 'winter' };
+}
+
+function getTasksWithStatus() {
+    const currentSeason = getSeason().key;
+    
+    const tasksWithStatus = tasks.map(t => {
+        let actualFreqDays = t.freqDays;
+
+        // 1. Déterminer la fréquence réelle en fonction de la saison
+        if (currentSeason === 'winter') {
+            if (t.season === 'summer' && t.freqDaysWinter === 0) {
+                // Tâche d'été sans fréquence hivernale : on la masque sauf si elle est en retard
+                actualFreqDays = 36500; // Fréquence énorme pour la reléguer au fond
+            } else if (t.freqDaysWinter > 0) {
+                actualFreqDays = t.freqDaysWinter;
+            }
+        }
+        
+        // 2. Calculer l'échéance
+        const last = new Date(t.lastDone);
+        const next = new Date(last);
+        next.setDate(last.getDate() + actualFreqDays);
+        
+        const diffTime = next - new Date();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+        
+        // 3. Déterminer l'urgence (pour le style)
+        let urgency = 'green';
+        if (diffDays <= 3 && diffDays >= 0) urgency = 'orange';
+        if (diffDays < 0) urgency = 'red';
+        if (diffDays > 3) urgency = 'done'; 
+        
+        let urgencyText;
+        if (diffDays < 0) urgencyText = `En retard de ${Math.abs(diffDays)} j`;
+        else if (diffDays === 0) urgencyText = "À faire aujourd'hui !";
+        else urgencyText = `Dans ${diffDays} jours`;
+
+        return { 
+            ...t, 
+            daysRemaining: diffDays,
+            actualFreq: actualFreqDays,
+            urgency: urgency,
+            urgencyText: urgencyText
+        };
+    }).filter(t => t.daysRemaining < 36500); // Masquer les tâches d'été profondes en hiver
+
+    // 4. Tri : Par ordre de catégorie, puis par urgence (jours restants) dans chaque catégorie.
+    return tasksWithStatus.sort((a, b) => {
+        const catA = categoryGroups[a.category].order;
+        const catB = categoryGroups[b.category].order;
+
+        if (catA !== catB) {
+            return catA - catB;
+        }
+        // Tri secondaire par urgence
+        return a.daysRemaining - b.daysRemaining;
+    });
+}
+
+function getCategoryColor(cat) {
+    const colors = {
+        'water': 'bg-blue-100 text-blue-600',
+        'elec': 'bg-yellow-100 text-yellow-600',
+        'pool': 'bg-cyan-100 text-cyan-600',
+        'home': 'bg-gray-100 text-gray-600',
+        'kitchen': 'bg-indigo-100 text-indigo-600',
+        'laundry': 'bg-red-100 text-red-600',
+        'garden': 'bg-green-100 text-green-600',
+        'auto': 'bg-orange-100 text-orange-600'
+    };
+    return colors[cat] || 'bg-gray-100';
+}
+
+function getUrgencyClass(urgency) {
+    if (urgency === 'red') return { bg: 'bg-red-100', text: 'text-red-700 font-bold', cardClass: 'border-red-400' };
+    if (urgency === 'orange') return { bg: 'bg-orange-100', text: 'text-orange-700 font-bold', cardClass: 'border-orange-400' };
+    if (urgency === 'green') return { bg: 'bg-green-100', text: 'text-green-700', cardClass: 'border-green-400' };
+    // État "Fait" / Prochaine échéance lointaine
+    if (urgency === 'done') return { bg: 'bg-green-100/50', text: 'text-green-700/80', cardClass: 'card-done' }; 
+    return { bg: 'bg-gray-100', text: 'text-gray-700', cardClass: '' };
+}
+
+// =========================================================================
+// 3. LOGIQUE DOM (Affichage)
+// =========================================================================
+
+function renderDashboard() {
+    const sortedTasks = getTasksWithStatus();
+    const tasksByCategoryElement = document.getElementById('tasks-by-category');
+    tasksByCategoryElement.innerHTML = ''; // Nettoyer le contenu
+
+    // A. Rendu des Statistiques
+    const nextUrgentTask = sortedTasks.filter(t => t.daysRemaining <= 3)[0] || sortedTasks[0];
+    const okTasks = sortedTasks.filter(t => t.daysRemaining > 0).length;
+    const completionRate = sortedTasks.length === 0 ? 100 : Math.round((okTasks / sortedTasks.length) * 100);
+
+    document.getElementById('stat-urgent').textContent = nextUrgentTask ? nextUrgentTask.title : 'Tout est OK !';
+    document.getElementById('stat-completion').textContent = `${completionRate}% (sur ${sortedTasks.length} tâches)`;
+    document.getElementById('stat-season').textContent = getSeason().name;
+
+    // B. Groupement des Tâches par Catégorie
+    const tasksGrouped = sortedTasks.reduce((acc, task) => {
+        const categoryKey = task.category;
+        const groupTitle = categoryGroups[categoryKey].title;
+        if (!acc[groupTitle]) {
+            acc[groupTitle] = [];
+        }
+        acc[groupTitle].push(task);
+        return acc;
+    }, {});
+    
+    const sortedGroupKeys = Object.keys(tasksGrouped).sort((a, b) => {
+        // Pour s'assurer que l'ordre des groupes est respecté
+        const keyA = tasksGrouped[a][0].category;
+        const keyB = tasksGrouped[b][0].category;
+        return categoryGroups[keyA].order - categoryGroups[keyB].order;
+    });
+
+    // C. Rendu des Groupes de Cartes
+    sortedGroupKeys.forEach(groupTitle => {
+        const groupTasks = tasksGrouped[groupTitle];
+        
+        let groupHTML = `
+            <div class="mt-8 mb-4">
+                <h3 class="text-2xl font-semibold text-gray-700 mb-4 border-b pb-2">${groupTitle} (${groupTasks.length} tâches)</h3>
+                <div class="grid-cards">
+        `;
+
+        groupTasks.forEach(task => {
+            const { bg, text, cardClass } = getUrgencyClass(task.urgency);
+            
+            groupHTML += `
+                <div class="p-5 rounded-xl shadow-sm flex flex-col justify-between card-hover border border-gray-200 ${cardClass}">
+                    <div class="flex items-start gap-3 mb-3">
+                        <div class="w-10 h-10 rounded-full flex items-center justify-center text-xl flex-shrink-0 ${getCategoryColor(task.category)}">
+                            ${task.icon}
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-gray-800">${task.title}</h3>
+                            <p class="text-sm text-gray-500">${task.desc}</p>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-between items-end pt-3 border-t border-gray-100">
+                        <div>
+                            <div class="text-xs mt-1 px-2 py-0.5 rounded inline-block" class="${bg}">
+                                <span class="${text}">${task.urgencyText}</span>
+                            </div>
+                            <span class="text-xs text-gray-400 block mt-1">
+                                Récurrence : ${task.actualFreq} jours
+                            </span>
+                        </div>
+                        <button data-id="${task.id}" 
+                                onclick="checkTask(this)" 
+                                class="bg-slate-800 hover:bg-slate-700 text-white px-4 py-1.5 text-sm rounded-lg shadow transition transform active:scale-95 flex items-center gap-1 flex-shrink-0">
+                            <span>✅</span> Fait
+                        </button>
+                    </div>
+                </div>
+            `;
+        });
+        
+        groupHTML += `
+                </div>
+            </div>
+        `;
+
+        tasksByCategoryElement.insertAdjacentHTML('beforeend', groupHTML);
+    });
+}
+
+function renderCalendar() {
+    const calendarView = document.getElementById('calendar-view');
+    calendarView.innerHTML = '';
+    const currentMonth = new Date().getMonth();
+
+    calendarData.forEach((monthData, index) => {
+        const isCurrent = index === currentMonth;
+        const className = isCurrent 
+            ? 'bg-blue-50 border-blue-500 shadow-md ring-2 ring-blue-200' 
+            : 'bg-white border-gray-200 opacity-80 hover:opacity-100';
+
+        const monthHTML = `
+            <div class="p-5 rounded-xl border transition-all ${className}">
+                <h3 class="font-bold text-lg mb-2 flex justify-between items-center">
+                    ${monthData.name}
+                    ${isCurrent ? '<span class="text-xs bg-blue-600 text-white px-2 py-1 rounded">Mois actuel</span>' : ''}
+                </h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                    <div>
+                        <strong class="block text-gray-500 mb-1">🏠 Maison & Piscine</strong>
+                        <p class="text-gray-700 whitespace-pre-line">${monthData.maison}</p>
+                    </div>
+                    <div class="col-span-2">
+                        <strong class="block text-gray-500 mb-1">🌳 Jardin (Oranger/Olivier)</strong>
+                        <p class="text-gray-700 whitespace-pre-line">${monthData.jardin}</p>
+                    </div>
+                </div>
+            </div>
+        `;
+        calendarView.insertAdjacentHTML('beforeend', monthHTML);
+    });
+}
+
+// =========================================================================
+// 4. PERSISTANCE DES DONNÉES (LocalStorage)
+// =========================================================================
+
+function loadData() {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    const defaultTaskMap = new Map(defaultTasks.map(t => [t.id, t]));
+
+    if (saved) {
+        try {
+            const savedTasks = JSON.parse(saved);
+            
+            // Reconstruire tasks en se basant sur la structure actuelle (defaultTasks)
+            tasks = defaultTasks.map(defaultT => {
+                const existing = savedTasks.find(t => t.id === defaultT.id);
+                if (existing) {
+                    // Si la tâche existe déjà, on garde sa date de dernière réalisation
+                    return { ...defaultT, lastDone: existing.lastDone };
+                }
+                // Nouvelle tâche, on lui donne la date d'aujourd'hui
+                return { ...defaultT, lastDone: new Date().toISOString() };
+            });
+
+        } catch (e) {
+            console.error("Erreur de chargement LocalStorage. Réinitialisation.");
+            resetToDefault();
+        }
+    } else {
+        resetToDefault();
+    }
+    saveData(); // On sauvegarde la nouvelle structure si elle a été mise à jour
+}
+
+function resetToDefault() {
+     // Initialiser avec la date d'aujourd'hui comme "dernier fait" pour démarrer
+    tasks = defaultTasks.map(t => ({
+        ...t,
+        lastDone: new Date().toISOString()
+    }));
+    saveData();
+}
+
+function saveData() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+}
+
+// Fonction globale appelée par le bouton "Fait"
+window.checkTask = function(buttonElement) {
+    const taskId = parseInt(buttonElement.dataset.id);
+    const taskIndex = tasks.findIndex(t => t.id === taskId);
+    
+    if (taskIndex !== -1) {
+        // 1. Mettre à jour la date dans le tableau des tâches
+        tasks[taskIndex].lastDone = new Date().toISOString();
+        
+        // 2. Sauvegarder immédiatement
+        saveData();
+        
+        // 3. Rafraîchir l'affichage (crucial pour le tri et le compte à rebours)
+        renderDashboard();
+    }
+}
+
+window.resetData = function() {
+    if(confirm('Attention : toutes les dates d\'entretien enregistrées vont être effacées et remises à aujourd\'hui ! Continuer ?')) {
+        localStorage.removeItem(STORAGE_KEY);
+        location.reload();
+    }
+}
+
+// =========================================================================
+// 5. INITIALISATION (Démarrage de l'application)
+// =========================================================================
+
+// Gestion de la navigation
+function setupNavigation() {
+    // Les deux ensembles de boutons ont le même data-tab
+    const desktopTabs = document.querySelectorAll('#nav-tabs-desktop button');
+    const mobileTabs = document.querySelectorAll('#mobile-nav button');
+    const contentTabs = document.querySelectorAll('.content-tab');
+
+    function switchTab(targetTabId) {
+        // Mettre à jour les boutons de navigation Desktop
+        desktopTabs.forEach(btn => {
+            btn.classList.remove('bg-slate-700');
+            if (btn.dataset.tab === targetTabId) {
+                btn.classList.add('bg-slate-700');
+            }
+        });
+        
+        // Mettre à jour les boutons de navigation Mobile
+        mobileTabs.forEach(btn => {
+            btn.classList.remove('active-tab-mobile');
+            btn.classList.remove('bg-slate-700');
+            if (btn.dataset.tab === targetTabId) {
+                // Utiliser une classe personnalisée pour le style actif mobile
+                btn.classList.add('active-tab-mobile');
+                btn.classList.add('text-green-400'); // Couleur active
+            } else {
+                btn.classList.remove('text-green-400');
+            }
+        });
+
+        // Afficher/Masquer le contenu
+        contentTabs.forEach(content => {
+            if (content.id === targetTabId) {
+                content.classList.remove('hidden');
+            } else {
+                content.classList.add('hidden');
+            }
+        });
+    }
+
+    // Écouteurs pour les deux sets de boutons
+    [...desktopTabs, ...mobileTabs].forEach(btn => {
+        btn.addEventListener('click', () => {
+            const targetTabId = btn.dataset.tab;
+            switchTab(targetTabId);
+            // Fermer le menu mobile si implémenté, ou juste s'assurer que l'écran est en haut
+            document.querySelector('main').scrollTo(0, 0); 
+        });
+    });
+
+    // Afficher le bon contenu au démarrage (dashboard par défaut)
+    switchTab('dashboard');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    loadData();
+    setupNavigation();
+    renderDashboard();
+    renderCalendar();
+});
+</script>
+
+</body>
+</html>
